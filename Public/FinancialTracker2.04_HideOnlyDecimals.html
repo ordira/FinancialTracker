@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Finance Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Custom styles */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Light gray background */
+        }
+        /* Style for active tab */
+        .tab-active {
+            border-bottom-color: #3b82f6; /* Blue border */
+            color: #3b82f6; /* Blue text */
+            font-weight: 600;
+        }
+        /* Style for inactive tab */
+        .tab-inactive {
+            border-bottom-color: transparent;
+            color: #6b7280; /* Gray text */
+        }
+        /* Simple modal styles */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed;
+            z-index: 50;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.6); /* Dim background */
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: #fff;
+            margin: auto;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 550px; /* Adjusted for more fields */
+            position: relative; /* Needed for close button positioning */
+        }
+        .modal-close {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.75rem;
+            cursor: pointer;
+            font-size: 1.75rem;
+            font-weight: bold;
+            line-height: 1;
+            color: #6b7280;
+        }
+         .modal-close:hover {
+             color: #1f2937;
+         }
+        /* Ensure charts are responsive */
+        .chart-container {
+            position: relative;
+            height: 300px; /* Adjust as needed */
+            width: 100%;
+        }
+        /* Custom scrollbar for transaction table */
+        .transaction-table-container {
+            max-height: 400px; /* Limit height */
+            overflow-y: auto; /* Add scrollbar */
+        }
+        /* Style for over-budget alerts */
+        .over-budget-alert {
+            background-color: #fef2f2; /* Light red */
+            color: #dc2626; /* Red */
+            border: 1px solid #fecaca; /* Lighter red border */
+        }
+        /* Input field for editing category name */
+        .category-name-input {
+             border: 1px solid #d1d5db; /* Gray border */
+             padding: 0.25rem 0.5rem;
+             border-radius: 0.375rem; /* Rounded */
+             font-size: 0.875rem; /* sm */
+             width: 150px; /* Adjust as needed */
+        }
+        /* Hide elements */
+        .hidden {
+            display: none;
+        }
+        /* Styling for download/filter section controls */
+        .controls-section label {
+             margin-right: 0.5rem;
+             font-size: 0.875rem; /* text-sm */
+             font-weight: 500; /* font-medium */
+             color: #374151; /* text-gray-700 */
+        }
+        .controls-section select, .controls-section input[type="date"] {
+            padding: 0.3rem 0.6rem;
+            border-radius: 0.375rem;
+            border: 1px solid #d1d5db;
+            font-size: 0.875rem;
+            margin-right: 1rem;
+            background-color: white;
+        }
+        /* Transaction action buttons */
+        .action-button {
+            padding: 0.2rem 0.4rem;
+            margin-left: 0.25rem;
+            border-radius: 0.25rem;
+        }
+        /* Dashboard navigation buttons */
+        .nav-button {
+            background-color: #e5e7eb; /* gray-200 */
+            color: #374151; /* gray-700 */
+            padding: 0.3rem 0.6rem;
+            border-radius: 0.375rem;
+            transition: background-color 0.2s;
+        }
+        .nav-button:hover {
+            background-color: #d1d5db; /* gray-300 */
+        }
+        .nav-button:disabled {
+            background-color: #f3f4f6; /* gray-100 */
+            color: #9ca3af; /* gray-400 */
+            cursor: not-allowed;
+        }
+        /* Add transaction form grid adjustment */
+        #add-transaction-form {
+            grid-template-columns: repeat(1, minmax(0, 1fr)); /* Default to 1 column */
+        }
+        @media (min-width: 640px) { /* sm */
+            #add-transaction-form {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+        @media (min-width: 1024px) { /* lg */
+            #add-transaction-form {
+                grid-template-columns: repeat(3, minmax(0, 1fr)); /* 3 columns on larger screens */
+            }
+             #add-transaction-form > .lg-span-3 { /* For the submit button to span all 3 */
+                grid-column: span 3 / span 3;
+            }
+        }
+         /* Edit transaction modal form grid */
+        #edit-transaction-form .grid-cols-modal {
+            display: grid;
+            grid-template-columns: repeat(1, minmax(0, 1fr));
+            gap: 1rem;
+        }
+         @media (min-width: 640px) { /* sm */
+            #edit-transaction-form .grid-cols-modal {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+        /* Added/Modified: Key Metric Card Styling */
+        .key-metric-card {
+            background-color: #ffffff;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+            text-align: center;
+        }
+        .key-metric-title {
+            font-size: 0.875rem; /* text-sm */
+            color: #4b5563; /* text-gray-600 */
+            margin-bottom: 0.25rem;
+        }
+        .key-metric-value {
+            font-size: 1.25rem; /* text-xl */
+            font-weight: 600; /* font-semibold */
+        }
+
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-7xl mx-auto bg-white rounded-lg shadow-xl p-6 md:p-8">
+        <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 text-center">Personal Finance Tracker</h1>
+
+        <div class="border-b border-gray-200 mb-6">
+            <nav class="-mb-px flex space-x-6 md:space-x-8" aria-label="Tabs">
+                <button onclick="changeTab('dashboard')" class="tab-button tab-active py-3 px-1 border-b-2 text-sm font-medium" data-tab="dashboard">Monthly Dashboard</button>
+                <button onclick="changeTab('budget')" class="tab-button tab-inactive py-3 px-1 border-b-2 text-sm font-medium" data-tab="budget">Budget</button>
+                <button onclick="changeTab('transactions')" class="tab-button tab-inactive py-3 px-1 border-b-2 text-sm font-medium" data-tab="transactions">Transactions</button>
+                <button onclick="changeTab('cashflow')" class="tab-button tab-inactive py-3 px-1 border-b-2 text-sm font-medium" data-tab="cashflow">Cash Flow</button>
+            </nav>
+        </div>
+
+        <div>
+            <div id="dashboard-tab" class="tab-content space-y-6">
+                <div class="flex justify-center items-center space-x-4 mb-4">
+                    <button id="prevMonthBtn" onclick="previousMonthDashboard()" class="nav-button" title="Previous Month">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <h2 class="text-xl font-semibold text-gray-700 text-center">
+                        Monthly Dashboard (<span id="dashboard-month-year"></span>)
+                    </h2>
+                    <button id="nextMonthBtn" onclick="nextMonthDashboard()" class="nav-button" title="Next Month">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                    <button id="toggleVisibilityBtn" onclick="toggleDashboardVisibility()" class="nav-button" title="Toggle Visibility">
+                        <i id="visibilityIcon" class="fas fa-eye"></i>
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                    <div class="key-metric-card">
+                        <h3 class="key-metric-title">Total Income</h3>
+                        <p id="dashboard-total-income" class="key-metric-value text-green-600">$0.00</p>
+                    </div>
+                    <div class="key-metric-card">
+                        <h3 class="key-metric-title">Total Expenses</h3>
+                        <p id="dashboard-total-expenses" class="key-metric-value text-red-600">$0.00</p>
+                    </div>
+                    <div class="key-metric-card">
+                        <h3 class="key-metric-title">Net Savings</h3>
+                        <p id="dashboard-net-savings" class="key-metric-value">$0.00</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-gray-50 p-4 rounded-lg shadow-sm space-y-6">
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-800 mb-3">Spending vs Budget</h3>
+                            <div id="total-spending-summary" class="mb-4 p-3 border-b border-gray-200">
+                                <p class="text-gray-500">Loading total summary...</p>
+                            </div>
+                            <div id="spending-summary" class="space-y-3">
+                                <p class="text-gray-500">Loading spending data...</p>
+                            </div>
+                            <div id="over-budget-alerts" class="mt-4 space-y-2">
+                            </div>
+                        </div>
+                        <div class="pt-4 border-t border-gray-200">
+                            <h3 class="text-lg font-medium text-gray-800 mb-3">Monthly Income Sources</h3>
+                            <div id="income-summary-details" class="space-y-2 text-sm">
+                                <p class="text-gray-500">Loading income data...</p>
+                            </div>
+                            <div id="total-monthly-income-display" class="mt-3 pt-3 border-t border-gray-300 text-right">
+                                <span class="text-md font-semibold text-gray-700">Total Income: </span>
+                                <span id="total-income-amount" class="text-md font-bold text-green-600">$0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-lg shadow-sm flex flex-col items-center space-y-6">
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-800 mb-3 text-center">Spending by Category</h3>
+                            <div class="chart-container" style="height: 250px;">
+                                <canvas id="spendingPieChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="w-full pt-4 border-t border-gray-200">
+                            <h3 class="text-lg font-medium text-gray-800 mb-3 text-center">Income vs. Expenses</h3>
+                            <div class="chart-container" style="height: 250px;">
+                                <canvas id="incomeExpenseBarChart"></canvas>
+                            </div>
+                        </div>
+                        <div id="category-transactions-container" class="mt-6 w-full bg-white p-3 rounded-md shadow-inner hidden">
+                            <h3 id="category-transactions-title" class="text-md font-semibold text-gray-700 mb-2"></h3>
+                            <div id="category-transactions-list" class="text-sm max-h-60 overflow-y-auto">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BUDGET TAB -->
+            <div id="budget-tab" class="tab-content hidden space-y-6"> <!-- Increased space-y -->
+                <div class="flex justify-between items-center mb-4">
+                     <h2 class="text-xl font-semibold text-gray-700">Manage Budget Categories</h2>
+                     <button onclick="addNewBudgetCategory()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md text-sm transition duration-150 ease-in-out">
+                         <i class="fas fa-plus mr-1"></i> Add New Category
+                     </button>
+                </div>
+
+                <div class="bg-gray-50 p-4 rounded-lg shadow-sm mb-6">
+                    <h3 class="text-lg font-medium text-gray-800 mb-3">Current Budgets</h3>
+                    <div id="budget-list" class="space-y-2">
+                        <p class="text-gray-500">Loading budget categories...</p>
+                    </div>
+                    <div id="total-budget-display" class="mt-4 pt-3 border-t border-gray-300 text-right">
+                        <span class="text-md font-semibold text-gray-700">Total Budgeted: </span>
+                        <span id="total-budget-amount" class="text-md font-bold text-blue-600">$0.00</span>
+                    </div>
+                    <div class="flex justify-end mt-4 space-x-3">
+                        <button onclick="saveBudgetAmounts()" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow transition duration-150 ease-in-out">
+                            <i class="fas fa-save mr-1"></i> Save Amounts
+                        </button>
+                        <button onclick="saveAndDownloadBudgetsCSV()" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg shadow transition duration-150 ease-in-out">
+                            <i class="fas fa-download mr-1"></i> Save & Download
+                        </button>
+                    </div>
+                     <p class="text-xs text-gray-500 mt-2 text-right">* Note: Renaming a category does not automatically update past transactions.</p>
+                </div>
+
+                <!-- Budget Upload Section -->
+                <div class="bg-gray-50 p-4 rounded-lg shadow-sm">
+                    <h3 class="text-lg font-medium text-gray-800 mb-3">Upload Budgets (CSV)</h3>
+                    <p class="text-sm text-gray-600 mb-2">
+                        Upload a CSV file to set your budget categories and amounts.
+                        This will <strong class="text-red-600">overwrite</strong> your current budgets.
+                    </p>
+                    <p class="text-xs text-gray-500 mb-3">
+                        Expected CSV format: `Category,Amount` (one per line). Header row is optional.
+                        The "Income" category, if present, will be ignored.
+                    </p>
+                    <input type="file" id="budget-csv-file-input" accept=".csv" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 mb-3">
+                    <button onclick="handleBudgetFileUpload()" class="bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2 px-4 rounded-lg shadow text-sm transition duration-150 ease-in-out">
+                        <i class="fas fa-upload mr-1"></i> Upload & Apply Budgets
+                    </button>
+                </div>
+                <!-- End Budget Upload Section -->
+
+            </div>
+            <!-- END BUDGET TAB -->
+
+
+            <div id="transactions-tab" class="tab-content hidden space-y-6">
+                <h2 class="text-xl font-semibold text-gray-700">Manage Transactions</h2>
+
+                <div class="bg-gray-50 p-4 rounded-lg shadow-sm">
+                    <h3 class="text-lg font-medium text-gray-800 mb-3">Add New Transaction</h3>
+                    <form id="add-transaction-form" class="gap-4 items-end">
+                        <div>
+                            <label for="transaction-date" class="block text-sm font-medium text-gray-700">Date</label>
+                            <input type="date" id="transaction-date" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2">
+                        </div>
+                        <div>
+                            <label for="transaction-description" class="block text-sm font-medium text-gray-700">Description</label>
+                            <input type="text" id="transaction-description" placeholder="e.g., Monthly Subscription" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2">
+                        </div>
+                        <div>
+                            <label for="transaction-merchant" class="block text-sm font-medium text-gray-700">Merchant/Payee</label>
+                            <input type="text" id="transaction-merchant" placeholder="e.g., Netflix, Landlord" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2">
+                        </div>
+                         <div>
+                            <label for="transaction-type" class="block text-sm font-medium text-gray-700">Type</label>
+                            <select id="transaction-type" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 bg-white">
+                                <option value="Expense">Expense</option>
+                                <option value="Income">Income</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="transaction-category" class="block text-sm font-medium text-gray-700">Category</label>
+                            <select id="transaction-category" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 bg-white">
+                                </select>
+                        </div>
+                        <div>
+                            <label for="transaction-amount" class="block text-sm font-medium text-gray-700">Amount</label>
+                            <input type="number" id="transaction-amount" step="0.01" placeholder="0.00" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2">
+                        </div>
+                        <div class="lg-span-3 flex justify-end">
+                            <button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg shadow transition duration-150 ease-in-out">
+                                <i class="fas fa-plus mr-1"></i> Add Transaction
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="bg-gray-50 p-4 rounded-lg shadow-sm">
+                    <h3 class="text-lg font-medium text-gray-800 mb-3">Bulk Upload Transactions (CSV)</h3>
+                    <div class="upload-controls mb-3 flex flex-wrap items-center">
+                        <label for="upload-card-type" class="text-sm font-medium text-gray-700 mr-2">Statement Type:</label>
+                        <select id="upload-card-type" class="p-1.5 rounded-md border-gray-300 shadow-sm text-sm bg-white mr-4">
+                            <option value="debit_bank">Debit Card / Bank Account</option>
+                            <option value="credit_card">Credit Card</option>
+                        </select>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-2">
+                        CSV format: Date, Description, Merchant/Payee, Amount, Category, [Type - Optional]<br>
+                        <span class="text-xs">
+                            - For <strong>Debit Card/Bank</strong>: Negative Amount = Expense. Positive Amount (with Type 'Income'/'Credit') = Income.
+                            <br>
+                            - For <strong>Credit Card</strong>: Positive Amount = Expense. Negative Amount = Income (e.g., refund, payment).
+                        </span>
+                    </p>
+                    <input type="file" id="csv-file-input" accept=".csv" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                    <div class="mt-2 flex space-x-2">
+                        <button onclick="handleFileUpload()" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1.5 px-3 rounded-lg shadow text-sm transition duration-150 ease-in-out">
+                            <i class="fas fa-upload mr-1"></i> Upload CSV
+                        </button>
+                        <button onclick="refreshDashboardAndCashFlow()" class="bg-teal-500 hover:bg-teal-600 text-white font-semibold py-1.5 px-3 rounded-lg shadow text-sm transition duration-150 ease-in-out">
+                            <i class="fas fa-sync-alt mr-1"></i> Refresh Views
+                        </button>
+                    </div>
+                 </div>
+
+                 <div class="bg-gray-50 p-4 rounded-lg shadow-sm">
+                    <h3 class="text-lg font-medium text-gray-800 mb-3">Download Transactions</h3>
+                    <div class="flex flex-wrap items-center controls-section">
+                        <label for="download-period">Period:</label>
+                        <select id="download-period" onchange="toggleCustomDateInputs()">
+                            <option value="all">All Time</option>
+                            <option value="current_month">Current Month</option>
+                            <option value="previous_month">Previous Month</option>
+                            <option value="current_year">Current Year</option>
+                            <option value="custom">Custom Range</option>
+                        </select>
+                        <div id="custom-date-range" class="hidden flex items-center ml-2">
+                             <label for="download-start-date">From:</label>
+                             <input type="date" id="download-start-date">
+                             <label for="download-end-date" class="ml-2">To:</label>
+                             <input type="date" id="download-end-date">
+                        </div>
+                        <button onclick="downloadTransactionsCSV()" class="bg-purple-500 hover:bg-purple-600 text-white font-semibold py-1.5 px-3 rounded-lg shadow text-sm transition duration-150 ease-in-out ml-auto">
+                            <i class="fas fa-download mr-1"></i> Download CSV
+                        </button>
+                    </div>
+                 </div>
+
+                <div class="bg-gray-50 p-4 rounded-lg shadow-sm">
+                    <div class="flex justify-between items-center mb-3">
+                         <h3 class="text-lg font-medium text-gray-800">Transaction History</h3>
+                         <button onclick="clearAllTransactions()" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-1.5 px-3 rounded-lg shadow text-sm transition duration-150 ease-in-out">
+                             <i class="fas fa-trash-alt mr-1"></i> Clear All History
+                         </button>
+                    </div>
+
+                    <div class="mb-4 p-3 border border-gray-200 rounded-lg controls-section bg-white">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+                            <div>
+                                <label for="filter-date-range">Date Range:</label>
+                                <select id="filter-date-range" onchange="toggleTransactionFilterCustomDates()">
+                                    <option value="all">All Time</option>
+                                    <option value="this_month">This Month</option>
+                                    <option value="last_month">Last Month</option>
+                                    <option value="this_year">This Year</option>
+                                    <option value="custom">Custom</option>
+                                </select>
+                            </div>
+                            <div id="filter-custom-dates" class="hidden sm:col-span-2 lg:col-span-1">
+                                <div>
+                                    <label for="filter-start-date">From:</label>
+                                    <input type="date" id="filter-start-date">
+                                </div>
+                                <div class="mt-2 sm:mt-0 sm:ml-2">
+                                    <label for="filter-end-date">To:</label>
+                                    <input type="date" id="filter-end-date">
+                                </div>
+                            </div>
+                             <div>
+                                <label for="filter-category">Category:</label>
+                                <select id="filter-category">
+                                    <option value="all">All Categories</option>
+                                    </select>
+                            </div>
+                            <div class="sm:col-span-2 lg:col-span-3 flex justify-start lg:justify-end">
+                                <button onclick="applyTransactionFilters()" class="bg-cyan-500 hover:bg-cyan-600 text-white font-semibold py-1.5 px-4 rounded-lg shadow text-sm transition duration-150 ease-in-out">
+                                    <i class="fas fa-filter mr-1"></i> Apply Filters
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <input type="text" id="transaction-search" placeholder="Search within filtered results (Description, Merchant, Amount, Category)..." class="block w-full md:w-1/2 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2">
+                    </div>
+                    <div class="transaction-table-container border border-gray-200 rounded-lg">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-100 sticky top-0">
+                                <tr>
+                                    <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                    <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                                    <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Merchant/Payee</th>
+                                    <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                                    <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                                    <th scope="col" class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                                    <th scope="col" class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transaction-list" class="bg-white divide-y divide-gray-200">
+                                <tr><td colspan="7" class="text-center p-4 text-gray-500">No transactions yet.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="cashflow-tab" class="tab-content hidden space-y-6">
+                <h2 class="text-xl font-semibold text-gray-700">Cash Flow Analysis</h2>
+                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6" id="cashflow-summary-cards">
+                     <div id="month1-summary-card" class="bg-sky-50 p-4 rounded-lg shadow-sm border border-sky-200">
+                         <h3 class="text-lg font-medium text-sky-800 mb-2"><span id="month1-name">Recent Month</span></h3>
+                         <p class="text-gray-700">Income: <span id="month1-income" class="font-semibold">$0.00</span></p>
+                         <p class="text-gray-700">Expenses: <span id="month1-expenses" class="font-semibold">$0.00</span></p>
+                         <p class="text-gray-700">Savings: <span id="month1-savings" class="font-semibold">$0.00</span></p>
+                         <p class="text-gray-700 mt-1">Savings Rate: <span id="month1-savings-rate" class="font-semibold">0.00%</span></p>
+                     </div>
+                     <div id="month2-summary-card" class="bg-lime-50 p-4 rounded-lg shadow-sm border border-lime-200 hidden">
+                         <h3 class="text-lg font-medium text-lime-800 mb-2"><span id="month2-name">Previous Month</span></h3>
+                         <p class="text-gray-700">Income: <span id="month2-income" class="font-semibold">$0.00</span></p>
+                         <p class="text-gray-700">Expenses: <span id="month2-expenses" class="font-semibold">$0.00</span></p>
+                         <p class="text-gray-700">Savings: <span id="month2-savings" class="font-semibold">$0.00</span></p>
+                         <p class="text-gray-700 mt-1">Savings Rate: <span id="month2-savings-rate" class="font-semibold">0.00%</span></p>
+                     </div>
+                     <div id="month3-summary-card" class="bg-amber-50 p-4 rounded-lg shadow-sm border border-amber-200 hidden">
+                         <h3 class="text-lg font-medium text-amber-800 mb-2"><span id="month3-name">Older Month</span></h3>
+                         <p class="text-gray-700">Income: <span id="month3-income" class="font-semibold">$0.00</span></p>
+                         <p class="text-gray-700">Expenses: <span id="month3-expenses" class="font-semibold">$0.00</span></p>
+                         <p class="text-gray-700">Savings: <span id="month3-savings" class="font-semibold">$0.00</span></p>
+                         <p class="text-gray-700 mt-1">Savings Rate: <span id="month3-savings-rate" class="font-semibold">0.00%</span></p>
+                     </div>
+                 </div>
+                 <div id="no-cashflow-summary-data" class="text-center text-gray-500 mb-6 hidden">
+                    <p>Not enough transaction data for a 3-month cash flow summary.</p>
+                </div>
+
+                 <div class="bg-gray-50 p-4 rounded-lg shadow-sm">
+                     <h3 class="text-lg font-medium text-gray-800 mb-3">Monthly Financial Trends (Last 12 Months)</h3>
+                     <div class="chart-container">
+                        <canvas id="cashFlowChart"></canvas>
+                     </div>
+                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="messageModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal('messageModal')">&times;</span>
+            <h3 id="modalMessageTitle" class="text-lg font-medium text-gray-800 mb-3">Notification</h3>
+            <p id="modalMessageText">This is a message!</p>
+            <div class="mt-4 text-right">
+                 <button onclick="closeModal('messageModal')" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1.5 px-3 rounded-lg text-sm">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="editTransactionModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal('editTransactionModal')">&times;</span>
+            <h3 class="text-lg font-medium text-gray-800 mb-4">Edit Transaction</h3>
+            <form id="edit-transaction-form">
+                <input type="hidden" id="edit-transaction-id">
+                <div class="grid-cols-modal">
+                     <div>
+                        <label for="edit-transaction-date" class="block text-sm font-medium text-gray-700">Date</label>
+                        <input type="date" id="edit-transaction-date" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2">
+                    </div>
+                    <div>
+                        <label for="edit-transaction-description" class="block text-sm font-medium text-gray-700">Description</label>
+                        <input type="text" id="edit-transaction-description" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2">
+                    </div>
+                    <div>
+                        <label for="edit-transaction-merchant" class="block text-sm font-medium text-gray-700">Merchant/Payee</label>
+                        <input type="text" id="edit-transaction-merchant" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2">
+                    </div>
+                     <div>
+                        <label for="edit-transaction-type" class="block text-sm font-medium text-gray-700">Type</label>
+                        <select id="edit-transaction-type" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 bg-white">
+                            <option value="Expense">Expense</option>
+                            <option value="Income">Income</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="edit-transaction-category" class="block text-sm font-medium text-gray-700">Category</label>
+                        <select id="edit-transaction-category" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 bg-white">
+                            </select>
+                    </div>
+                    <div>
+                        <label for="edit-transaction-amount" class="block text-sm font-medium text-gray-700">Amount</label>
+                        <input type="number" id="edit-transaction-amount" step="0.01" placeholder="0.00" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2">
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-end space-x-3">
+                    <button type="button" onclick="closeModal('editTransactionModal')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg shadow text-sm">Cancel</button>
+                    <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow text-sm">
+                        <i class="fas fa-save mr-1"></i> Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <script>
+        // --- Global Variables ---
+        let budgets = {};
+        let transactions = [];
+        let spendingPieChart = null;
+        let cashFlowChart = null;
+        let incomeExpenseBarChart = null;
+        let dashboardDate = new Date();
+        let isDashboardVisible = true; // For visibility toggle
+        const initialDefaultCategories = [
+            "Mortgage & Rent", "Bills & Utilities", "Food", "Gas & Transportation",
+            "Insurance", "Groceries", "Kids", "Home", "Shopping", "Entertainment",
+            "CreditCard Payment", "Transfer", "Taxes"
+        ];
+        const incomeCategory = "Income";
+        const currencyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+
+        // --- Date Helper ---
+        function parseLocalDate(dateString) {
+            if (!dateString) return null;
+            const parts = dateString.split('-');
+            if (parts.length !== 3) return null;
+            const year = parseInt(parts[0], 10), month = parseInt(parts[1], 10) - 1, day = parseInt(parts[2], 10);
+            if (isNaN(year) || isNaN(month) || isNaN(day)) return null;
+            return new Date(year, month, day);
+        }
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            dashboardDate.setDate(1); loadData(); initializeUI(); changeTab('dashboard');
+            document.getElementById('transaction-date').valueAsDate = new Date();
+            const today = new Date().toISOString().split('T')[0];
+            ['download-start-date', 'download-end-date', 'filter-start-date', 'filter-end-date'].forEach(id => document.getElementById(id).value = today);
+            document.getElementById('edit-transaction-form').addEventListener('submit', saveTransactionEdit);
+            document.getElementById('edit-transaction-type').addEventListener('change', handleEditTransactionTypeChange);
+        });
+
+        // --- Data Handling ---
+        function loadData() {
+            budgets = JSON.parse(localStorage.getItem('budgets')) || {};
+            transactions = JSON.parse(localStorage.getItem('transactions')) || [];
+            if (Object.keys(budgets).length === 0) {
+                initialDefaultCategories.forEach(cat => budgets[cat] = 0);
+                saveData();
+            }
+        }
+        function saveData() {
+            localStorage.setItem('budgets', JSON.stringify(budgets));
+            localStorage.setItem('transactions', JSON.stringify(transactions));
+        }
+
+        // --- UI Initialization ---
+        function initializeUI() {
+            populateBudgetList(); populateCategoryDropdowns(); populateTransactionFilterCategoryDropdown();
+            addTransactionFormListener(); addTransactionSearchListener();
+            document.getElementById('transaction-type').addEventListener('change', handleTransactionTypeChange);
+            handleTransactionTypeChange();
+        }
+
+        // --- Tab Switching ---
+        function changeTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
+            document.querySelectorAll('.tab-button').forEach(btn => { btn.classList.remove('tab-active'); btn.classList.add('tab-inactive'); });
+            document.getElementById(`${tabId}-tab`).classList.remove('hidden');
+            const activeBtn = document.querySelector(`.tab-button[data-tab="${tabId}"]`);
+            activeBtn.classList.remove('tab-inactive'); activeBtn.classList.add('tab-active');
+            if (tabId !== 'dashboard') {
+                const catTxCont = document.getElementById('category-transactions-container');
+                catTxCont.classList.add('hidden');
+                document.getElementById('category-transactions-list').innerHTML = '';
+                document.getElementById('category-transactions-title').textContent = '';
+            }
+            switch(tabId) {
+                case 'dashboard': dashboardDate = new Date(); dashboardDate.setDate(1); renderDashboard(); break;
+                case 'budget': populateBudgetList(); break;
+                case 'transactions': applyTransactionFilters(); break;
+                case 'cashflow': renderCashFlow(); break;
+            }
+        }
+
+        // --- Budget Tab Functions ---
+        function populateBudgetList() { /* ... (condensed, no significant changes from previous) ... */
+            const budgetListDiv = document.getElementById('budget-list');
+            budgetListDiv.innerHTML = '';
+            let totalBudget = 0;
+            const sortedCategories = Object.keys(budgets).sort((a, b) => a.localeCompare(b));
+            let expenseCategoriesExist = false;
+            sortedCategories.forEach(category => {
+                if (category === incomeCategory) return;
+                expenseCategoriesExist = true;
+                const budgetAmount = budgets[category] || 0;
+                totalBudget += budgetAmount;
+                const categoryIdSafe = category.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+                const div = document.createElement('div');
+                div.classList.add('flex', 'justify-between', 'items-center', 'p-3', 'bg-white', 'rounded-md', 'shadow-sm', 'border', 'border-gray-200');
+                div.setAttribute('data-category', category);
+                div.innerHTML = `
+                    <div class="flex-grow mr-4">
+                        <span id="span-${categoryIdSafe}" class="text-sm font-medium text-gray-800">${category}</span>
+                        <input type="text" id="input-${categoryIdSafe}" value="${category}" class="category-name-input hidden" placeholder="Category Name">
+                    </div>
+                    <div class="flex items-center space-x-2">
+                         <input type="number" value="${budgetAmount}" step="10" min="0"
+                               class="budget-amount-input w-24 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-1 text-right"
+                               aria-label="Budget amount for ${category}">
+                        <button id="edit-btn-${categoryIdSafe}" onclick="editCategoryName(this, '${category}')" class="text-blue-600 hover:text-blue-800 text-xs p-1 transition-colors" title="Edit Category Name"><i class="fas fa-pencil-alt"></i></button>
+                        <button id="save-btn-${categoryIdSafe}" onclick="saveCategoryNameEdit(this, '${category}')" class="text-green-600 hover:text-green-800 text-xs p-1 hidden transition-colors" title="Save Category Name"><i class="fas fa-check"></i></button>
+                        <button onclick="deleteBudgetCategory('${category}')" class="text-red-600 hover:text-red-800 text-xs p-1 transition-colors" title="Delete Category"><i class="fas fa-trash-alt"></i></button>
+                    </div>`;
+                budgetListDiv.appendChild(div);
+            });
+            if (!expenseCategoriesExist) {
+                budgetListDiv.innerHTML = '<p class="text-gray-500 text-sm p-2">No expense budget categories defined. Click "Add New Category" or upload a budget CSV.</p>';
+            }
+            document.getElementById('total-budget-amount').textContent = currencyFormatter.format(totalBudget);
+        }
+        function editCategoryName(button, categoryName) { /* ... (condensed) ... */
+            const row = button.closest('div.flex'); const idSafe = categoryName.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+            row.querySelector(`#span-${idSafe}`).classList.add('hidden'); button.classList.add('hidden');
+            const input = row.querySelector(`#input-${idSafe}`); input.classList.remove('hidden'); input.focus();
+            row.querySelector(`#save-btn-${idSafe}`).classList.remove('hidden');
+        }
+        function saveCategoryNameEdit(button, oldName) { /* ... (condensed) ... */
+            const row = button.closest('div.flex'); const idSafe = oldName.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+            const input = row.querySelector(`#input-${idSafe}`); const newName = input.value.trim();
+            if (!newName) { showMessage("Category name cannot be empty.", "Error"); input.focus(); return; }
+            if (newName === incomeCategory) { showMessage(`Cannot rename to "${incomeCategory}".`, "Error"); input.focus(); return; }
+            if (newName !== oldName && budgets.hasOwnProperty(newName)) { showMessage(`Category "${newName}" already exists.`, "Error"); input.focus(); return; }
+            const amount = budgets[oldName]; delete budgets[oldName]; budgets[newName] = amount;
+            const span = row.querySelector(`#span-${idSafe}`); span.textContent = newName; span.classList.remove('hidden');
+            input.classList.add('hidden'); input.value = newName; button.classList.add('hidden');
+            row.querySelector(`#edit-btn-${idSafe}`).classList.remove('hidden');
+            row.setAttribute('data-category', newName);
+            row.querySelector(`#edit-btn-${idSafe}`).setAttribute('onclick', `editCategoryName(this, '${newName}')`);
+            button.setAttribute('onclick', `saveCategoryNameEdit(this, '${newName}')`);
+            row.querySelector(`button[title='Delete Category']`).setAttribute('onclick', `deleteBudgetCategory('${newName}')`);
+            saveData(); populateCategoryDropdowns(); populateTransactionFilterCategoryDropdown();
+            showMessage(`Category renamed to "${newName}". Past transactions not updated.`, "Success"); populateBudgetList();
+        }
+        function saveBudgetAmounts() { /* ... (condensed) ... */
+            let changed = false;
+            document.querySelectorAll('#budget-list > div').forEach(row => {
+                const cat = row.getAttribute('data-category'); const input = row.querySelector('.budget-amount-input');
+                if (cat && input) { const newAmt = parseFloat(input.value) || 0; if (budgets[cat] !== newAmt) { budgets[cat] = newAmt; changed = true; } }
+            });
+            if (changed) { saveData(); populateBudgetList(); showMessage("Budget amounts saved!", "Success"); if (!document.getElementById('dashboard-tab').classList.contains('hidden')) renderDashboard(); }
+            else { showMessage("No changes in budget amounts.", "Info"); }
+        }
+        function addNewBudgetCategory() { /* ... (condensed) ... */
+            const name = prompt("New budget category name:");
+            if (!name || !name.trim()) { showMessage("Name cannot be empty.", "Warning"); return; }
+            const trimmed = name.trim();
+            if (trimmed === incomeCategory) { showMessage(`Cannot be "${incomeCategory}".`, "Warning"); return; }
+            if (budgets.hasOwnProperty(trimmed)) { showMessage(`"${trimmed}" already exists.`, "Warning"); return; }
+            budgets[trimmed] = 0; saveData(); populateBudgetList(); populateCategoryDropdowns(); populateTransactionFilterCategoryDropdown();
+            showMessage(`Category "${trimmed}" added.`, "Success");
+        }
+        function deleteBudgetCategory(name) { /* ... (condensed) ... */
+            if (confirm(`Delete category "${name}"? Cannot be undone.`)) {
+                if (budgets.hasOwnProperty(name)) {
+                    delete budgets[name]; saveData(); populateBudgetList(); populateCategoryDropdowns(); populateTransactionFilterCategoryDropdown();
+                    if (!document.getElementById('dashboard-tab').classList.contains('hidden')) renderDashboard();
+                    showMessage(`Category "${name}" deleted.`, "Success");
+                } else { showMessage(`Category "${name}" not found.`, "Error"); }
+            }
+        }
+        function saveAndDownloadBudgetsCSV() { /* ... (condensed) ... */
+            saveBudgetAmounts();
+            const expenseBudgets = Object.entries(budgets).filter(([c, _]) => c !== incomeCategory);
+            if (expenseBudgets.length === 0) { showMessage("No budgets to download.", "Info"); return; }
+            const header = "Category,Amount\n";
+            const csvRows = expenseBudgets.map(([cat, amt]) => `${cat.includes(',') ? `"${cat}"` : cat},${amt}`).join("\n");
+            const blob = new Blob([header + csvRows], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a"); link.href = URL.createObjectURL(blob);
+            link.download = `budgets_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(link); link.click(); document.body.removeChild(link);
+            showMessage("Budgets saved & CSV download started.", "Success");
+        }
+        
+        function handleBudgetFileUpload() {
+            const fileInput = document.getElementById('budget-csv-file-input');
+            const file = fileInput.files[0];
+            if (!file) {
+                showMessage("Please select a CSV file to upload.", "Warning");
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                parseAndApplyBudgets(event.target.result);
+            };
+            reader.onerror = () => {
+                showMessage("Error reading budget CSV file.", "Error");
+            };
+            reader.readAsText(file);
+            fileInput.value = ''; // Reset file input
+        }
+
+        function parseAndApplyBudgets(csvData) {
+            const rows = csvData.split('\n').map(row => row.trim()).filter(row => row);
+            if (rows.length === 0) {
+                showMessage("Budget CSV file is empty.", "Info");
+                return;
+            }
+
+            let headerRow = rows[0].toLowerCase();
+            let dataRows = rows;
+            // Basic check if the first row looks like a header ("category,amount")
+            if (headerRow.includes("category") && headerRow.includes("amount")) {
+                dataRows = rows.slice(1); // Skip header row
+            }
+
+            const newBudgets = {};
+            let importedCount = 0;
+            let errorCount = 0;
+
+            dataRows.forEach((row, index) => {
+                const columns = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(col => col.trim().replace(/^"|"$/g, ''));
+
+                if (columns.length === 2) {
+                    const categoryFromFile = columns[0].trim();
+                    const amountFromFile = parseFloat(columns[1]);
+
+                    if (!categoryFromFile) {
+                        console.warn(`Skipping budget import row ${index + (dataRows === rows ? 1: 2)}: Category name is empty.`);
+                        errorCount++;
+                        return;
+                    }
+                    if (categoryFromFile === incomeCategory) {
+                        console.warn(`Skipping budget import row ${index + (dataRows === rows ? 1: 2)}: "${incomeCategory}" category is not a budgetable expense.`);
+                        errorCount++;
+                        return;
+                    }
+                    if (isNaN(amountFromFile) || amountFromFile < 0) {
+                        console.warn(`Skipping budget import row ${index + (dataRows === rows ? 1: 2)}: Invalid amount for category "${categoryFromFile}". Amount must be a non-negative number.`);
+                        errorCount++;
+                        return;
+                    }
+
+                    if (newBudgets.hasOwnProperty(categoryFromFile)) {
+                        console.warn(`Duplicate category "${categoryFromFile}" found in CSV. Overwriting with new amount.`);
+                    }
+                    newBudgets[categoryFromFile] = amountFromFile;
+                    importedCount++;
+
+                } else if (row) { // If row is not empty but doesn't have 2 columns
+                    console.warn(`Skipping budget import row ${index + (dataRows === rows ? 1: 2)}: Incorrect column count. Expected 2, got ${columns.length}. Row: ${row}`);
+                    errorCount++;
+                }
+            });
+
+            if (importedCount > 0) {
+                budgets = newBudgets; // Overwrite existing budgets
+                saveData();
+                populateBudgetList();
+                populateCategoryDropdowns();
+                populateTransactionFilterCategoryDropdown();
+                if (!document.getElementById('dashboard-tab').classList.contains('hidden')) {
+                    renderDashboard();
+                }
+                showMessage(`${importedCount} budget items imported successfully. ${errorCount > 0 ? errorCount + ' rows skipped.' : ''}`, "Success");
+            } else if (errorCount > 0) {
+                showMessage(`No valid budget items imported. ${errorCount} rows had errors. Please check CSV format.`, "Error");
+            } else {
+                showMessage("No budget items found in the CSV file to import.", "Info");
+            }
+        }
+
+
+        // --- Transaction Tab Functions ---
+        function populateCategoryDropdowns() { /* ... (condensed) ... */
+            const addSelect = document.getElementById('transaction-category'); const editSelect = document.getElementById('edit-transaction-category');
+            const curAdd = addSelect.value; const curEdit = editSelect.value; addSelect.innerHTML = ''; editSelect.innerHTML = '';
+            const expCats = Object.keys(budgets).filter(c => c !== incomeCategory).sort((a, b) => a.localeCompare(b));
+            const addOpts = (sel) => {
+                sel.add(new Option(incomeCategory, incomeCategory));
+                expCats.forEach(cat => sel.add(new Option(cat, cat)));
+            };
+            addOpts(addSelect); addOpts(editSelect);
+            const setSelectVal = (sel, curVal, cats) => {
+                if (curVal && Array.from(sel.options).some(o => o.value === curVal)) sel.value = curVal;
+                else if (cats.length > 0) sel.value = cats[0]; else sel.value = incomeCategory;
+            };
+            setSelectVal(addSelect, curAdd, expCats); setSelectVal(editSelect, curEdit, expCats);
+            handleTransactionTypeChange(); handleEditTransactionTypeChange();
+        }
+        function handleTransactionTypeChange() { toggleCategoryDropdown(document.getElementById('transaction-type'), document.getElementById('transaction-category'), false); }
+        function handleEditTransactionTypeChange() { toggleCategoryDropdown(document.getElementById('edit-transaction-type'), document.getElementById('edit-transaction-category'), true); }
+        function toggleCategoryDropdown(typeSel, catSel, isEdit) { /* ... (condensed) ... */
+            if (!isEdit && typeSel.value === 'Income') {
+                catSel.value = incomeCategory; catSel.disabled = true; catSel.classList.add('bg-gray-100', 'cursor-not-allowed');
+            } else {
+                catSel.disabled = false; catSel.classList.remove('bg-gray-100', 'cursor-not-allowed');
+                if (typeSel.value === 'Income') catSel.value = incomeCategory;
+                else if (catSel.value === incomeCategory) {
+                    const firstExp = catSel.querySelector(`option:not([value="${incomeCategory}"])`); if (firstExp) catSel.value = firstExp.value;
+                }
+            }
+        }
+        function addTransactionFormListener() { /* ... (condensed) ... */
+             document.getElementById('add-transaction-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const date = document.getElementById('transaction-date').value, desc = document.getElementById('transaction-description').value.trim(),
+                      merch = document.getElementById('transaction-merchant').value.trim(), type = document.getElementById('transaction-type').value,
+                      catSel = document.getElementById('transaction-category'), cat = catSel.value, amt = parseFloat(document.getElementById('transaction-amount').value);
+                if (!date || !desc || !merch || !cat || isNaN(amt) || amt <= 0) { showMessage("Fill all fields correctly (amount > 0).", "Warning"); return; }
+                const finalCat = (type === 'Income' && catSel.disabled) ? incomeCategory : cat;
+                transactions.push({ id: Date.now().toString() + Math.random().toString(36).substring(2,9), date, description: desc, merchantName: merch, type, category: finalCat, amount: amt });
+                saveData(); applyTransactionFilters(); renderDashboard(); renderCashFlow();
+                showMessage("Transaction added!", "Success"); e.target.reset(); document.getElementById('transaction-date').valueAsDate = new Date(); handleTransactionTypeChange();
+            });
+        }
+        function renderTransactionList(filteredTx = transactions) { /* ... (condensed) ... */
+            const tbody = document.getElementById('transaction-list'); tbody.innerHTML = '';
+            if (filteredTx.length === 0) { tbody.innerHTML = '<tr><td colspan="7" class="text-center p-4 text-gray-500">No transactions.</td></tr>'; return; }
+            filteredTx.sort((a,b) => parseLocalDate(b.date) - parseLocalDate(a.date)).forEach((tx, i) => {
+                const row = tbody.insertRow(); row.className = i % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+                row.innerHTML = `
+                    <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-700">${tx.date}</td>
+                    <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-900">${tx.description}</td>
+                    <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-700">${tx.merchantName || ''}</td>
+                    <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-700">${tx.type}</td>
+                    <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-700">${tx.category}</td>
+                    <td class="px-4 py-2 whitespace-nowrap text-sm text-right font-medium ${tx.type === 'Income' ? 'text-green-600' : 'text-red-600'}">${tx.type === 'Expense' ? '-' : ''}${currencyFormatter.format(tx.amount)}</td>
+                    <td class="px-4 py-2 whitespace-nowrap text-center text-sm font-medium">
+                        <button onclick="openEditTransactionModal('${tx.id}')" class="text-blue-600 hover:text-blue-800 text-xs action-button" title="Edit"><i class="fas fa-pencil-alt"></i> Edit</button>
+                        <button onclick="deleteTransaction('${tx.id}')" class="text-red-600 hover:text-red-800 text-xs action-button" title="Delete"><i class="fas fa-times-circle"></i> Delete</button>
+                    </td>`;
+            });
+        }
+        function openEditTransactionModal(id) { /* ... (condensed) ... */
+            const tx = transactions.find(t => t.id === id); if (!tx) { showMessage("Transaction not found.", "Error"); return; }
+            document.getElementById('edit-transaction-id').value = tx.id; document.getElementById('edit-transaction-date').value = tx.date;
+            document.getElementById('edit-transaction-description').value = tx.description; document.getElementById('edit-transaction-merchant').value = tx.merchantName || '';
+            document.getElementById('edit-transaction-amount').value = tx.amount; document.getElementById('edit-transaction-type').value = tx.type;
+            populateCategoryDropdowns(); const catSel = document.getElementById('edit-transaction-category'); catSel.value = tx.category;
+            handleEditTransactionTypeChange();
+            if (!catSel.querySelector(`option[value="${tx.category}"]`)) {
+                if (tx.type === 'Income') catSel.value = incomeCategory;
+                else { const firstExp = catSel.querySelector(`option:not([value="${incomeCategory}"])`); if (firstExp) catSel.value = firstExp.value; }
+                showMessage(`Original category "${tx.category}" might be changed. Verify.`, "Warning");
+            }
+            document.getElementById('editTransactionModal').style.display = 'flex';
+        }
+        function saveTransactionEdit(e) { /* ... (condensed) ... */
+            e.preventDefault();
+            const id = document.getElementById('edit-transaction-id').value, date = document.getElementById('edit-transaction-date').value,
+                  desc = document.getElementById('edit-transaction-description').value.trim(), merch = document.getElementById('edit-transaction-merchant').value.trim(),
+                  type = document.getElementById('edit-transaction-type').value, cat = document.getElementById('edit-transaction-category').value,
+                  amt = parseFloat(document.getElementById('edit-transaction-amount').value);
+            if (!date || !desc || !merch || !cat || isNaN(amt) || amt <= 0) { showMessage("Fill all fields (amount > 0).", "Warning"); return; }
+            const idx = transactions.findIndex(tx => tx.id === id); if (idx === -1) { showMessage("Cannot save. Tx not found.", "Error"); return; }
+            transactions[idx] = { ...transactions[idx], date, description: desc, merchantName: merch, type, category: cat, amount: amt };
+            saveData(); applyTransactionFilters(); renderDashboard(); renderCashFlow(); closeModal('editTransactionModal'); showMessage("Transaction updated!", "Success");
+        }
+        function deleteTransaction(id) { /* ... (condensed) ... */
+            if (confirm('Delete this transaction?')) {
+                transactions = transactions.filter(tx => tx.id !== id); saveData();
+                applyTransactionFilters(); renderDashboard(); renderCashFlow(); showMessage("Transaction deleted.", "Success");
+            }
+        }
+        function addTransactionSearchListener() { document.getElementById('transaction-search').addEventListener('input', applyTransactionFilters); }
+        function populateTransactionFilterCategoryDropdown() { /* ... (condensed) ... */
+            const sel = document.getElementById('filter-category'); const cur = sel.value; sel.innerHTML = '';
+            sel.add(new Option("All Categories", "all")); sel.add(new Option(incomeCategory, incomeCategory));
+            Object.keys(budgets).filter(c => c !== incomeCategory).sort().forEach(cat => sel.add(new Option(cat, cat)));
+            if (cur && Array.from(sel.options).some(o => o.value === cur)) sel.value = cur; else sel.value = "all";
+        }
+        function toggleTransactionFilterCustomDates() { document.getElementById('filter-custom-dates').classList.toggle('hidden', document.getElementById('filter-date-range').value !== 'custom'); }
+        function applyTransactionFilters() { /* ... (condensed) ... */
+            let filtered = [...transactions];
+            const dateRange = document.getElementById('filter-date-range').value, filterCat = document.getElementById('filter-category').value,
+                  searchTerm = document.getElementById('transaction-search').value.toLowerCase().trim(), now = new Date();
+            let startDt, endDt;
+            switch (dateRange) {
+                case 'this_month': startDt = new Date(now.getFullYear(), now.getMonth(), 1); endDt = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23,59,59,999); break;
+                case 'last_month': startDt = new Date(now.getFullYear(), now.getMonth() - 1, 1); endDt = new Date(now.getFullYear(), now.getMonth(), 0, 23,59,59,999); break;
+                case 'this_year': startDt = new Date(now.getFullYear(), 0, 1); endDt = new Date(now.getFullYear(), 11, 31, 23,59,59,999); break;
+                case 'custom':
+                    const s = document.getElementById('filter-start-date').value, e = document.getElementById('filter-end-date').value;
+                    if (s && e) { startDt = parseLocalDate(s); if(startDt) startDt.setHours(0,0,0,0); endDt = parseLocalDate(e); if(endDt) endDt.setHours(23,59,59,999); } break;
+            }
+            if (startDt && endDt) filtered = filtered.filter(tx => { const d = parseLocalDate(tx.date); return d && d >= startDt && d <= endDt; });
+            if (filterCat !== 'all') filtered = filtered.filter(tx => tx.category === filterCat);
+            if (searchTerm) filtered = filtered.filter(tx => tx.description.toLowerCase().includes(searchTerm) || (tx.merchantName && tx.merchantName.toLowerCase().includes(searchTerm)) || tx.amount.toString().includes(searchTerm) || tx.category.toLowerCase().includes(searchTerm));
+            renderTransactionList(filtered);
+        }
+        function handleFileUpload() { /* ... (condensed) ... */
+            const fileIn = document.getElementById('csv-file-input'); const file = fileIn.files[0];
+            if (!file) { showMessage("Select CSV file.", "Warning"); return; }
+            const reader = new FileReader(); reader.onload = (e) => parseAndAddTransactions(e.target.result);
+            reader.onerror = () => showMessage("Error reading file.", "Error"); reader.readAsText(file); fileIn.value = '';
+        }
+        function parseAndAddTransactions(csvData) { /* ... (condensed) ... */
+            const rows = csvData.split('\n').map(r => r.trim()).filter(r => r); const head = rows.shift();
+            const cardType = document.getElementById('upload-card-type').value;
+            if (!head || head.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).length < 5) { showMessage("CSV header missing/invalid.", "Error"); return; }
+            let add = 0, err = 0;
+            rows.forEach((row, i) => {
+                const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(c => c.trim().replace(/^"|"$/g, ''));
+                if (cols.length >= 5) {
+                    try {
+                        const dateF = cols[0], descF = cols[1]||"", merchF = cols[2]||"", amtV = parseFloat(cols[3]), catF = cols[4], typeF = cols[5]||'';
+                        if (!dateF.trim() || isNaN(amtV) || !catF.trim()) { console.warn(`Skip CSV row ${i+2}: Missing essential data.`, row); err++; return; }
+                        if (!/^\d{4}-\d{2}-\d{2}$/.test(dateF) && !/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateF)) { console.warn(`Skip CSV row ${i+2}: Invalid date ${dateF}.`, row); err++; return; }
+                        let pDate = dateF; if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateF)) { const p=dateF.split('/'); pDate=`${p[2]}-${p[0].padStart(2,'0')}-${p[1].padStart(2,'0')}`; }
+                        let finAmt = Math.abs(amtV), finCat, finType;
+                        if (cardType === 'credit_card') {
+                            finType = amtV > 0 ? 'Expense' : 'Income';
+                            finCat = finType === 'Income' ? incomeCategory : catF;
+                        } else { // debit_bank
+                            finType = amtV < 0 ? 'Expense' : (typeF.toLowerCase()==='income'||typeF.toLowerCase()==='credit' ? 'Income' : 'Expense');
+                            if(amtV === 0 && finType !== 'Income') finType = 'Expense'; // Default 0 to expense
+                            finCat = finType === 'Income' ? incomeCategory : catF;
+                        }
+                        if (catF && catF !== incomeCategory && !budgets.hasOwnProperty(catF) && finType === 'Expense') budgets[catF] = 0; // Auto-add category for expenses
+                        if (!finCat) { console.warn(`Skip CSV row ${i+2}: Category undetermined.`, row); err++; return; }
+                        transactions.push({ id:Date.now().toString()+Math.random().toString(36).substring(2,9), date:pDate, description:descF, merchantName:merchF, type:finType, category:finCat, amount:finAmt });
+                        add++;
+                    } catch (e) { console.error(`Err parse CSV row ${i+2}:`, row, e); err++; }
+                } else { console.warn(`Skip CSV row ${i+2} (cols ${cols.length}).`, row); err++; }
+            });
+            if (add > 0) { saveData(); populateBudgetList(); populateCategoryDropdowns(); populateTransactionFilterCategoryDropdown(); applyTransactionFilters(); renderDashboard(); renderCashFlow(); }
+            showMessage(`CSV: ${add} added, ${err} skipped.`, "Info");
+        }
+        function toggleCustomDateInputs() { document.getElementById('custom-date-range').classList.toggle('hidden', document.getElementById('download-period').value !== 'custom'); }
+        function downloadTransactionsCSV() { /* ... (condensed) ... */
+            const period = document.getElementById('download-period').value; let filt = []; const now = new Date(), curM = now.getMonth(), curY = now.getFullYear();
+            switch(period){
+                case 'current_month': filt=transactions.filter(tx=>{const d=parseLocalDate(tx.date); return d&&d.getMonth()===curM&&d.getFullYear()===curY;}); break;
+                case 'previous_month': const pM=new Date(curY,curM-1,1); filt=transactions.filter(tx=>{const d=parseLocalDate(tx.date); return d&&d.getMonth()===pM.getMonth()&&d.getFullYear()===pM.getFullYear();}); break;
+                case 'current_year': filt=transactions.filter(tx=>{const d=parseLocalDate(tx.date); return d&&d.getFullYear()===curY;}); break;
+                case 'custom': const s=document.getElementById('download-start-date').value, e=document.getElementById('download-end-date').value; if(!s||!e){showMessage("Select start/end date.", "Warning"); return;} const sD=parseLocalDate(s),eD=parseLocalDate(e); if(!sD||!eD){showMessage("Invalid date format.","Error");return;} eD.setHours(23,59,59,999); filt=transactions.filter(tx=>{const d=parseLocalDate(tx.date); return d&&d>=sD&&d<=eD;}); break;
+                default: filt=transactions; break;
+            }
+            if(filt.length===0){showMessage("No transactions for period.","Info");return;}
+            const head="Date,Description,Merchant/Payee,Amount,Category,Type\n";
+            const rows=filt.map(tx=>`${tx.date},${(tx.description||'').includes(',')?`"${tx.description}"`:tx.description||''},${(tx.merchantName||'').includes(',')?`"${tx.merchantName}"`:tx.merchantName||''},${tx.type==='Expense'?-tx.amount:tx.amount},${(tx.category||'').includes(',')?`"${tx.category}"`:tx.category||''},${tx.type}`).join("\n");
+            const blob=new Blob([head+rows],{type:'text/csv;charset=utf-8;'}); const link=document.createElement("a"); link.href=URL.createObjectURL(blob); link.download=`tx_${period}_${new Date().toISOString().split('T')[0]}.csv`; document.body.appendChild(link); link.click(); document.body.removeChild(link); showMessage("CSV download started.","Success");
+        }
+        function clearAllTransactions() { if (confirm('DELETE ALL transaction history? Cannot be undone.')) { transactions = []; saveData(); applyTransactionFilters(); renderDashboard(); renderCashFlow(); showMessage("All transaction history cleared.", "Success"); } }
+        function refreshDashboardAndCashFlow() { renderDashboard(); renderCashFlow(); showMessage("Dashboard & Cash Flow refreshed.", "Info"); }
+
+        // --- Monthly Dashboard Functions ---
+
+        // MODIFIED: Helper function to format values based on visibility state
+        function formatDashboardValue(value) {
+            // If visible or the value is small, format normally and exit.
+            if (isDashboardVisible || Math.abs(value) < 1000) {
+                return currencyFormatter.format(value);
+            }
+
+            // It's not visible and >= 1000, so we must mask it.
+            const formatted = currencyFormatter.format(value);
+
+            const decimalIndex = formatted.lastIndexOf('.');
+            const integerPart = (decimalIndex === -1) ? formatted : formatted.substring(0, decimalIndex);
+            const decimalPart = (decimalIndex === -1) ? '' : formatted.substring(decimalIndex);
+
+            // Find the last comma. This is our split point.
+            let splitIndex = integerPart.lastIndexOf(',');
+
+            // Handle cases like '1234' where a comma might not be used by the formatter.
+            if (splitIndex === -1) {
+                const numberDigits = integerPart.replace(/[^0-9]/g, '');
+                if (numberDigits.length === 4) {
+                    // Find where the number begins
+                    let firstDigitIndex = integerPart.search(/\d/);
+                    // The split point is after the first digit.
+                    splitIndex = firstDigitIndex + 1;
+                } else {
+                    // Not a 4-digit number and has no comma, so we can't reliably split.
+                    // Return a generic single asterisk mask.
+                    return formatted.replace(/\d/g, '*');
+                }
+            }
+
+            const partToMask = integerPart.substring(0, splitIndex);
+            const partToKeep = integerPart.substring(splitIndex); // e.g., ",234"
+
+            // Replace every digit in the part-to-mask with an asterisk.
+            const masked = partToMask.replace(/\d/g, '*');
+            
+            return `${masked}${partToKeep}${decimalPart}`;
+        }
+
+        function toggleDashboardVisibility() {
+            isDashboardVisible = !isDashboardVisible;
+            const icon = document.getElementById('visibilityIcon');
+            if (isDashboardVisible) {
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            } else {
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            }
+            renderDashboard();
+        }
+
+        function renderDashboard() {
+            const currentVisibleMonth = dashboardDate.getMonth(), currentVisibleYear = dashboardDate.getFullYear();
+            document.getElementById('dashboard-month-year').textContent = dashboardDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+            document.getElementById('category-transactions-container').classList.add('hidden');
+            document.getElementById('category-transactions-list').innerHTML = ''; document.getElementById('category-transactions-title').textContent = '';
+            const today = new Date(); today.setDate(1); today.setHours(0,0,0,0);
+            const dashCompare = new Date(dashboardDate); dashCompare.setHours(0,0,0,0);
+            document.getElementById('nextMonthBtn').disabled = dashCompare >= today;
+            const currentMonthTx = transactions.filter(tx => { const d = parseLocalDate(tx.date); return d && d.getMonth() === currentVisibleMonth && d.getFullYear() === currentVisibleYear; });
+            let spendingByCat = {}, totalSpent = 0, totalBudgeted = 0;
+            Object.keys(budgets).forEach(cat => { if (cat !== incomeCategory) { spendingByCat[cat] = 0; totalBudgeted += (budgets[cat] || 0); } });
+            currentMonthTx.forEach(tx => { if (tx.type === 'Expense' && tx.category !== incomeCategory) { if (!spendingByCat[tx.category]) spendingByCat[tx.category] = 0; spendingByCat[tx.category] += tx.amount; totalSpent += tx.amount; } });
+            let incomeBySrc = {}, totalIncome = 0;
+            currentMonthTx.forEach(tx => { if (tx.type === 'Income') { if (!incomeBySrc[tx.category]) incomeBySrc[tx.category] = 0; incomeBySrc[tx.category] += tx.amount; totalIncome += tx.amount; } });
+            document.getElementById('dashboard-total-income').textContent = formatDashboardValue(totalIncome);
+            document.getElementById('dashboard-total-expenses').textContent = formatDashboardValue(totalSpent);
+            const netSave = totalIncome - totalSpent; const netSaveEl = document.getElementById('dashboard-net-savings');
+            netSaveEl.textContent = formatDashboardValue(netSave); netSaveEl.className = `key-metric-value ${netSave >= 0 ? 'text-green-600' : 'text-red-500'}`;
+            document.getElementById('total-spending-summary').innerHTML = `
+                <div class="flex justify-between text-md mb-1"><span class="font-semibold text-gray-800">Total Spending:</span><span class="font-bold ${totalSpent > totalBudgeted && totalBudgeted > 0 ? 'text-red-600':'text-gray-800'}">${formatDashboardValue(totalSpent)}</span></div>
+                <div class="flex justify-between text-md"><span class="font-semibold text-gray-800">Total Budget:</span><span class="font-bold text-blue-600">${formatDashboardValue(totalBudgeted)}</span></div>`;
+            const spendSumDiv = document.getElementById('spending-summary'), alertsDiv = document.getElementById('over-budget-alerts');
+            spendSumDiv.innerHTML = ''; alertsDiv.innerHTML = ''; let hasSpendOrBudget = false;
+            Object.keys(budgets).sort().forEach(cat => {
+                if (cat === incomeCategory) return; const spent = spendingByCat[cat] || 0; const budget = budgets[cat] || 0; const perc = budget > 0 ? (spent/budget)*100 : (spent>0?100:0);
+                if (budget > 0 || spent > 0) { hasSpendOrBudget = true; const row = document.createElement('div');
+                    row.innerHTML = `<div class="flex justify-between text-sm mb-1"><span class="font-medium text-gray-700 cursor-pointer hover:text-blue-600" onclick="showCategoryTransactions('${cat}', new Date(dashboardDate), 'Expense')">${cat}</span><span class="text-gray-600">${formatDashboardValue(spent)} / ${formatDashboardValue(budget)}</span></div><div class="w-full bg-gray-200 rounded-full h-2.5"><div class="${perc>100?'bg-red-600':(perc>80?'bg-yellow-500':'bg-green-500')} h-2.5 rounded-full" style="width:${Math.min(perc,100)}%"></div></div>`;
+                    spendSumDiv.appendChild(row); if (spent > budget && budget > 0) { const al = document.createElement('div'); al.className='p-2 rounded-md text-sm over-budget-alert'; al.textContent=`❗ Over budget in ${cat} by ${formatDashboardValue(spent-budget)}`; alertsDiv.appendChild(al); }
+                }
+            });
+            if (!hasSpendOrBudget && totalSpent === 0 && totalBudgeted === 0) spendSumDiv.innerHTML = '<p class="text-gray-500 text-sm">No spending/budgets for month.</p>';
+            const incomeDetDiv = document.getElementById('income-summary-details'); incomeDetDiv.innerHTML = '';
+            if (Object.keys(incomeBySrc).length > 0) Object.entries(incomeBySrc).sort().forEach(([src,amt])=>{ const d=document.createElement('div'); d.className='flex justify-between'; d.innerHTML=`<span class="text-gray-700 cursor-pointer hover:text-blue-600" onclick="showCategoryTransactions('${src}', new Date(dashboardDate), 'Income')">${src}</span><span class="font-medium text-green-700">${formatDashboardValue(amt)}</span>`; incomeDetDiv.appendChild(d); });
+            else incomeDetDiv.innerHTML = '<p class="text-gray-500">No income this month.</p>';
+            document.getElementById('total-income-amount').textContent = formatDashboardValue(totalIncome);
+            const pieL=[],pieD=[]; Object.keys(spendingByCat).forEach(c=>{if(spendingByCat[c]>0){pieL.push(c);pieD.push(spendingByCat[c]);}});
+            renderSpendingPieChart(pieL, pieD, generateColors(pieL.length));
+            renderIncomeExpenseBarChart(totalIncome, totalSpent);
+        }
+        
+        function showCategoryTransactions(catName, dispDate, txType) {
+            const cont = document.getElementById('category-transactions-container'), listDiv = document.getElementById('category-transactions-list'), titleEl = document.getElementById('category-transactions-title');
+            const m = dispDate.getMonth(), y = dispDate.getFullYear(), myStr = dispDate.toLocaleDateString('en-US', {month:'long',year:'numeric'});
+            titleEl.textContent = `${txType} for "${catName}" in ${myStr}`; listDiv.innerHTML = '';
+            const catTx = transactions.filter(tx => { const d=parseLocalDate(tx.date); return d && tx.category===catName && tx.type===txType && d.getMonth()===m && d.getFullYear()===y; });
+            if (catTx.length === 0) listDiv.innerHTML = `<p class="text-gray-500 p-3 text-center">No ${txType.toLowerCase()} transactions.</p>`;
+            else { const tab = document.createElement('table'); tab.className='min-w-full divide-y divide-gray-300';
+                tab.innerHTML=`<thead class="bg-gray-100"><tr><th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase">Date</th><th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase">Description</th><th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase">Merchant</th><th class="px-3 py-2.5 text-right text-xs font-semibold text-gray-600 uppercase">Amount</th></tr></thead><tbody class="bg-white divide-y divide-gray-200"></tbody>`;
+                const tbody = tab.querySelector('tbody');
+                catTx.sort((a,b)=>parseLocalDate(b.date)-parseLocalDate(a.date)).forEach(tx=>{ const r=tbody.insertRow(); r.innerHTML=`<td class="px-3 py-2 ws-nowrap text-xs text-gray-500">${tx.date}</td><td class="px-3 py-2 ws-nowrap text-xs text-gray-900">${tx.description}</td><td class="px-3 py-2 ws-nowrap text-xs text-gray-500">${tx.merchantName||''}</td><td class="px-3 py-2 ws-nowrap text-xs text-right font-medium ${txType==='Income'?'text-green-600':'text-red-600'}">${formatDashboardValue(tx.amount)}</td>`; });
+                listDiv.appendChild(tab);
+            }
+            cont.classList.remove('hidden'); cont.scrollIntoView({behavior:'smooth',block:'nearest'});
+        }
+        function previousMonthDashboard() { dashboardDate.setMonth(dashboardDate.getMonth() - 1); renderDashboard(); }
+        function nextMonthDashboard() { /* ... (condensed) ... */
+            const tempNext = new Date(dashboardDate); tempNext.setMonth(tempNext.getMonth() + 1); const today = new Date(); today.setDate(1); today.setHours(0,0,0,0);
+            if (tempNext <= today) { dashboardDate.setMonth(dashboardDate.getMonth() + 1); renderDashboard(); }
+        }
+        
+        function renderSpendingPieChart(labels, data, colors) {
+            const canv = document.getElementById('spendingPieChart'), ctx = canv.getContext('2d'), cont = canv.parentElement;
+            let noMsg = cont.querySelector('.no-data-message-pie'); if (spendingPieChart) spendingPieChart.destroy();
+            if (data.length === 0 || data.every(i=>i===0)) { canv.style.display='none'; if(!noMsg){noMsg=document.createElement('p');noMsg.textContent='No spending for pie chart.';noMsg.className='text-gray-500 text-sm no-data-message-pie text-center mt-4 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2';cont.appendChild(noMsg);} noMsg.style.display='block'; }
+            else { canv.style.display='block'; if(noMsg)noMsg.style.display='none'; spendingPieChart = new Chart(ctx, { type: 'pie', data: { labels, datasets: [{ data, backgroundColor: colors, borderColor:'#fff', borderWidth:1 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend:{position:'bottom',labels:{boxWidth:12,padding:10,font:{size:10}}}, tooltip:{callbacks:{label:c=>`${c.label}: ${formatDashboardValue(c.parsed)}`}} } } }); }
+        }
+        
+        function renderIncomeExpenseBarChart(income, expenses) {
+            const canv = document.getElementById('incomeExpenseBarChart'), ctx = canv.getContext('2d');
+            let noMsg = canv.parentElement.querySelector('.no-data-message-bar'); if (incomeExpenseBarChart) incomeExpenseBarChart.destroy();
+            if (income===0 && expenses===0) { canv.style.display='none'; if(!noMsg){noMsg=document.createElement('p');noMsg.textContent='No income/expense for bar chart.';noMsg.className='text-gray-500 text-sm no-data-message-bar text-center mt-4 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2';canv.parentElement.appendChild(noMsg);} noMsg.style.display='block'; }
+            else { canv.style.display='block'; if(noMsg)noMsg.style.display='none'; incomeExpenseBarChart = new Chart(ctx, { type:'bar', data:{ labels:['Monthly Totals'], datasets:[{label:'Total Income',data:[income],backgroundColor:'rgba(16,185,129,0.7)',borderColor:'rgba(16,185,129,1)',borderWidth:1},{label:'Total Expenses',data:[expenses],backgroundColor:'rgba(239,68,68,0.7)',borderColor:'rgba(239,68,68,1)',borderWidth:1}] }, options:{ responsive:true,maintainAspectRatio:false, scales:{y:{beginAtZero:true,ticks:{callback:v=>formatDashboardValue(v)}}}, plugins:{tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${formatDashboardValue(c.parsed.y)}`}}}} }); }
+        }
+
+        // --- Cash Flow Tab Functions ---
+        function renderCashFlow() { /* ... (condensed, previous logic for 3-month summary and multi-line chart is retained) ... */
+            const uniqueMonths = [...new Set(transactions.map(tx => { const d = parseLocalDate(tx.date); return d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` : null; }).filter(m => m))].sort((a, b) => b.localeCompare(a));
+            const lastThreeActiveMonths = uniqueMonths.slice(0, 3);
+            const summaryCardsContainer = document.getElementById('cashflow-summary-cards');
+            const noDataMessage = document.getElementById('no-cashflow-summary-data');
+            for (let i = 1; i <= 3; i++) document.getElementById(`month${i}-summary-card`).classList.add('hidden');
+            if (lastThreeActiveMonths.length === 0) { summaryCardsContainer.classList.add('hidden'); noDataMessage.classList.remove('hidden'); }
+            else {
+                summaryCardsContainer.classList.remove('hidden'); noDataMessage.classList.add('hidden');
+                lastThreeActiveMonths.forEach((monthYearStr, index) => {
+                    const [year, monthNum] = monthYearStr.split('-').map(Number); const monthIndex = monthNum - 1;
+                    const totals = calculateMonthlyTotals(monthIndex, year); const cardIndex = index + 1;
+                    const card = document.getElementById(`month${cardIndex}-summary-card`);
+                    const displayDate = new Date(year, monthIndex, 1);
+                    document.getElementById(`month${cardIndex}-name`).textContent = displayDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                    document.getElementById(`month${cardIndex}-income`).textContent = currencyFormatter.format(totals.income);
+                    document.getElementById(`month${cardIndex}-expenses`).textContent = currencyFormatter.format(totals.expenses);
+                    document.getElementById(`month${cardIndex}-savings`).textContent = currencyFormatter.format(totals.savings);
+                    const savingsRate = totals.income > 0 ? (totals.savings / totals.income) * 100 : 0;
+                    const rateEl = document.getElementById(`month${cardIndex}-savings-rate`);
+                    rateEl.textContent = `${savingsRate.toFixed(2)}%`; rateEl.className = `font-semibold ${savingsRate >= 0 ? 'text-green-700' : 'text-red-700'}`;
+                    card.classList.remove('hidden');
+                });
+            }
+            const yearlyLabels = [], yearlyIncomeData = [], yearlyExpenseData = [], yearlySavingsData = [];
+            const now = new Date();
+            for (let i = 11; i >= 0; i--) {
+                const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                const totals = calculateMonthlyTotals(date.getMonth(), date.getFullYear());
+                yearlyLabels.push(date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }));
+                yearlyIncomeData.push(totals.income); yearlyExpenseData.push(totals.expenses); yearlySavingsData.push(totals.savings);
+            }
+            renderCashFlowChart(yearlyLabels, yearlyIncomeData, yearlyExpenseData, yearlySavingsData);
+        }
+        function calculateMonthlyTotals(month, year) { /* ... (condensed) ... */
+            let income = 0, expenses = 0;
+            transactions.forEach(tx => {
+                const txDate = parseLocalDate(tx.date);
+                if (txDate && txDate.getMonth() === month && txDate.getFullYear() === year) {
+                    if (tx.type === 'Income') income += tx.amount; else expenses += tx.amount;
+                }
+            });
+            return { income, expenses, savings: income - expenses };
+        }
+        function renderCashFlowChart(labels, incomeData, expenseData, savingsData) { /* ... (condensed) ... */
+            const ctx = document.getElementById('cashFlowChart').getContext('2d'); if (cashFlowChart) cashFlowChart.destroy();
+            cashFlowChart = new Chart(ctx, { type: 'line', data: { labels: labels, datasets: [
+                { label: 'Total Income', data: incomeData, borderColor: 'rgb(16, 185, 129)', backgroundColor: 'rgba(16, 185, 129, 0.1)', fill: true, tension: 0.1 },
+                { label: 'Total Expenses', data: expenseData, borderColor: 'rgb(239, 68, 68)', backgroundColor: 'rgba(239, 68, 68, 0.1)', fill: true, tension: 0.1 },
+                { label: 'Net Savings', data: savingsData, borderColor: 'rgb(59, 130, 246)', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.1 }
+            ]}, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: false, ticks: { callback: val => currencyFormatter.format(val) }}}, plugins: { tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${currencyFormatter.format(ctx.parsed.y)}` }}} }});
+        }
+
+        // --- Utility Functions ---
+        function showMessage(message, title = "Notification", modalId = 'messageModal') { /* ... (condensed) ... */
+            const modal = document.getElementById(modalId);
+            if (modalId === 'messageModal') { document.getElementById('modalMessageTitle').textContent = title; document.getElementById('modalMessageText').textContent = message; }
+            modal.style.display = 'flex';
+        }
+        function closeModal(modalId) { document.getElementById(modalId).style.display = 'none'; }
+        function generateColors(count) { /* ... (condensed) ... */
+            const colors = []; const baseColors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#6EE7B7', '#FBBF24', '#F87171', '#A78BFA', '#F472B6', '#06B6D4'];
+            for (let i = 0; i < count; i++) colors.push(baseColors[i % baseColors.length]); return colors;
+        }
+    </script>
+</body>
+</html>

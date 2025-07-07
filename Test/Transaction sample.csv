@@ -1,0 +1,13 @@
+Date,Description,Merchant/Payee,Amount,Category,Type
+2025-03-09,[DN]HSC             PAY/PAY,,2264.06,Income,Income
+2025-03-15,COSTCO WHOLESALE W524,COSTCO WHOLESALE,-96.69,Groceries,Expense
+2025-03-14,COSTCO GAS W1655,COSTCO GAS,-52,Gas & Transportation,Expense
+2025-03-14,BRANTMUSICFESTIVAL.COM,,-41.4,Entertainment,Expense
+2025-03-13,IKEA ,,-22,Home,Expense
+2025-03-13,RODEO RETAIL,,-76.8,Shopping,Expense
+2025-03-11,FREEDOM MOBILE,,-39.55,Bills & Utilities,Expense
+2025-03-10,PERFORMING DANCE ARTS,,-233.64,Kids,Expense
+2025-03-06,SONNET INSURANCE COMPA,,-44.87,Insurance,Expense
+2025-03-05,POPULAR CAR WASH,,-39.54,Gas & Transportation,Expense
+2025-03-05,CHIMA membership,CHIMA,-182.78,Transfer,Expense
+2025-03-03,[DN]B/M PAYT/PAY    MTG/HYP,,-2694.06,Mortgage & Rent,Expense
